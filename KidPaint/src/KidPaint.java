@@ -2,13 +2,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.LinkedList;
 
 
 public class KidPaint extends JFrame {
@@ -16,6 +15,8 @@ public class KidPaint extends JFrame {
     Socket tcpSocket;
     private String serverAddr = "";
     private int[][] data = new int[50][50];
+    UI ui;          // get the instance of UI
+
 
     public KidPaint(int port) {
         try {
@@ -38,7 +39,6 @@ public class KidPaint extends JFrame {
             socket.receive(packet);
             byte[] data = packet.getData();
             String str = new String(data, 0, packet.getLength());       // receive the ACK from Server by UDP
-
             if (str.equals("ACK")) {
                 for (int i = 1; i < packet.getAddress().toString().length(); i++) {
                     serverAddr += packet.getAddress().toString().charAt(i);         // to get the IP address of server
@@ -48,7 +48,7 @@ public class KidPaint extends JFrame {
             }
 
         } catch (IOException e) {
-            e.getMessage();
+            System.out.println(e.getMessage());
         }
 
     }
@@ -59,33 +59,48 @@ public class KidPaint extends JFrame {
             tcpSocket = new Socket(serverAddr, 45678);
             DataInputStream in = new DataInputStream(tcpSocket.getInputStream());
             DataOutputStream out = new DataOutputStream(tcpSocket.getOutputStream());
-            Thread t = new Thread(() -> {
 
+            for (int j = 0; j < data.length; j++) {
+                for (int i = 0; i < data[j].length; i++) {
+                    data[j][i] = in.readInt();
+                }
+            }
+            ui = UI.getInstance();
+            ui.setData(getData(), 20);    // set the data array and block size. comment this statement to use the default data array and block size.
+            ui.setVisible(true);                // set the ui
+
+            Thread t = new Thread(() -> {
+                byte[] buffer = new byte[1024];
                 try {
-                    for (int j = 0; j < data.length; j++) {
-                        for (int i = 0; i < data[j].length; i++) {
-                            data[j][i] = in.readInt();
-                        }
-                    }
                     while (true) {
-                        int col=in.readInt();
-                        int row=in.readInt();
-                        data[col][row]=in.readInt();
+                        int len = in.readInt();
+                        in.read(buffer, 0, len);
+                        byte[] object=new byte[len];
+                        for(int i=0;i<len;i++){
+                            object[i]=buffer[i];
+                        }
+                        LinkedList<Point> point=(LinkedList<Point>)ByteArrayParser.byte2Object(object);
+                        int color = in.readInt();
+                        ui.selectColor(color);
+                       for(int i=0;i<point.size();i++){
+                           ui.paintPixel(point.get(i).x,point.get(i).y);
+                       }
                     }
-                } catch (IOException ex) {
+                } catch (IOException | ClassNotFoundException ex) {
                     System.err.println("Connection dropped!");
                     System.exit(-1);
                 }
             });
             t.start();
 
-
-            while(true){
-
+            while (true) {
+                  Object[] change = ui.getChange();
+                    out.writeInt(ByteArrayParser.object2Byte(change[0]).length);
+                    out.write(ByteArrayParser.object2Byte(change[0]));
+                    out.writeInt((int) change[1]);
             }
-
         } catch (IOException e) {
-            e.getMessage();
+            System.out.println(e.getMessage());
         }
     }
 
@@ -125,9 +140,9 @@ public class KidPaint extends JFrame {
                     try {
                         sendMsg(nameField.getText(), "255.255.255.255", 12345);
                     } catch (IOException exception) {
-                        exception.getMessage();
+                        System.out.println(exception.getMessage());
                     }
-                    System.out.print(nameField.getText());
+                    System.out.println(nameField.getText());
                     dispose();
                 }
             }
@@ -136,17 +151,18 @@ public class KidPaint extends JFrame {
         this.setVisible(true);
     }
 
+
+
     public static void main(String[] args) {
-        KidPaint client = new KidPaint(23456);
+        KidPaint client = new KidPaint(23451);
         while (client.getServerAddr().equals("")) {
             System.out.println("\nWaiting for data...");
             client.receive();
         }
 
-        UI ui = UI.getInstance();            // get the instance of UI
-        ui.setData(client.getData(), 20);    // set the data array and block size. comment this statement to use the default data array and block size.
-        ui.setVisible(true);                // set the ui
-
+//        UI ui = UI.getInstance();            // get the instance of UI
+//        ui.setData(client.getData(), 20);    // set the data array and block size. comment this statement to use the default data array and block size.
+//        ui.setVisible(true);                // set the ui
 
 
     }

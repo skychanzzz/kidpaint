@@ -40,7 +40,10 @@ public class UI extends JFrame {
 	int[][] data = new int[50][50];			// pixel color data array
 	int blockSize = 16;
 	PaintMode paintMode = PaintMode.Pixel;
-	
+
+	LinkedList<Point> change;
+	volatile boolean token=false;
+
 	/**
 	 * get the instance of UI. Singleton design pattern.
 	 * @return
@@ -102,18 +105,24 @@ public class UI extends JFrame {
 			// handle the mouse-up event of the paint panel
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				if (paintMode == PaintMode.Area && e.getX() >= 0 && e.getY() >= 0)
-					paintArea(e.getX()/blockSize, e.getY()/blockSize);
+				if (paintMode == PaintMode.Area && e.getX() >= 0 && e.getY() >= 0) {
+					paintArea(e.getX() / blockSize, e.getY() / blockSize);
+				}
 			}
+
+
 		});
 		
 		paintPanel.addMouseMotionListener(new MouseMotionListener() {
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				if (paintMode == PaintMode.Pixel && e.getX() >= 0 && e.getY() >= 0)
-					paintPixel(e.getX()/blockSize,e.getY()/blockSize);
+				if (paintMode == PaintMode.Pixel && e.getX() >= 0 && e.getY() >= 0) {
+					change = paintPixel(e.getX() / blockSize, e.getY() / blockSize);
+					token = true;
+				}
 			}
+
 
 			@Override public void mouseMoved(MouseEvent e) {}
 			
@@ -242,11 +251,15 @@ public class UI extends JFrame {
 	 * change the color of a specific pixel
 	 * @param col, row - the position of the selected pixel
 	 */
-	public void paintPixel(int col, int row) {
-		if (col >= data.length || row >= data[0].length) return;
+	public LinkedList<Point> paintPixel(int col, int row) {
+		if (col >= data.length || row >= data[0].length) return null;
 		
 		data[col][row] = selectedColor;
 		paintPanel.repaint(col * blockSize, row * blockSize, blockSize, blockSize);
+
+		LinkedList<Point> filledPixels = new LinkedList<Point>();
+		filledPixels.add(new Point(col,row));
+		return filledPixels;
 	}
 	
 	/**
@@ -295,5 +308,14 @@ public class UI extends JFrame {
 		this.blockSize = blockSize;
 		paintPanel.setPreferredSize(new Dimension(data.length * blockSize, data[0].length * blockSize));
 		paintPanel.repaint();
+	}
+
+	public Object[] getChange(){
+		while(!token){}
+		Object[] a=new Object[2];
+		a[0]=change;
+		a[1]=selectedColor;
+		token=false;
+		return a;
 	}
 }
