@@ -43,6 +43,8 @@ public class UI extends JFrame {
 
     LinkedList<Point> change;
     volatile boolean token = false;
+    volatile boolean isMsg=false;
+    String Msg;
 
     /**
      * get the instance of UI. Singleton design pattern.
@@ -119,6 +121,7 @@ public class UI extends JFrame {
             public void mouseReleased(MouseEvent e) {
                 if (paintMode == PaintMode.Area && e.getX() >= 0 && e.getY() >= 0) {
                     change = paintArea(e.getX() / blockSize, e.getY() / blockSize);
+                    isMsg=false;
                     token = true;
                 }
             }
@@ -132,6 +135,7 @@ public class UI extends JFrame {
             public void mouseDragged(MouseEvent e) {
                 if (paintMode == PaintMode.Pixel && e.getX() >= 0 && e.getY() >= 0) {
                     change = paintPixel(e.getX() / blockSize, e.getY() / blockSize);
+                    isMsg=false;
                     token = true;
                 }
             }
@@ -241,7 +245,10 @@ public class UI extends JFrame {
             public void keyReleased(KeyEvent e) {
                 if (e.getKeyCode() == 10) {        // if the user press ENTER
                     onTextInputted(msgField.getText());
+                    Msg=msgField.getText();
                     msgField.setText("");
+                    isMsg=true;
+                    token=true;
                 }
             }
 
@@ -349,10 +356,22 @@ public class UI extends JFrame {
     public Object[] getChange() {
         while (!token) {
         }
-        Object[] a = new Object[2];
-        a[0] = change;
-        a[1] = selectedColor;
         token = false;
-        return a;
+        if(isMsg){
+            Object[] m=new Object[1];
+            m[0]=Msg;
+            return m;
+        }else {
+            Object[] a = new Object[2];
+            a[0] = change;
+            a[1] = selectedColor;
+            return a;
+        }
+    }
+
+    public void msgShow(String content){
+        SwingUtilities.invokeLater(() -> {
+            chatArea.append(content + "\n");
+        });
     }
 }

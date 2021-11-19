@@ -15,6 +15,7 @@ public class KidPaint extends JFrame {
     Socket tcpSocket;
     private String serverAddr = "";
     private int[][] data = new int[50][50];
+    private String name;
     UI ui;          // get the instance of UI
 
 
@@ -73,17 +74,28 @@ public class KidPaint extends JFrame {
                 byte[] buffer = new byte[1024];
                 try {
                     while (true) {
-                        ui.selectColor(in.readInt());
-                        int len = in.readInt();
-                        in.read(buffer, 0, len);
-                        byte[] object = new byte[len];
-                        for (int i = 0; i < len; i++) {
-                            object[i] = buffer[i];
-                        }
-                        LinkedList<Point> point = (LinkedList<Point>) ByteArrayParser.byte2Object(object);
-                        for (int i = 0; i < point.size(); i++) {
-                            ui.paintPixel(point.get(i).x, point.get(i).y);
-                        }
+                       int mode= in.readInt();
+                       if(mode==2) {            //send diagram data
+                           ui.selectColor(in.readInt());
+                           int len = in.readInt();
+                           in.read(buffer, 0, len);
+                           byte[] object = new byte[len];
+                           for (int i = 0; i < len; i++) {
+                               object[i] = buffer[i];
+                           }
+                           LinkedList<Point> point = (LinkedList<Point>) ByteArrayParser.byte2Object(object);
+                           for (int i = 0; i < point.size(); i++) {
+                               ui.paintPixel(point.get(i).x, point.get(i).y);
+                           }
+                       }else{               //receive message
+                           int len = in.readInt();
+                           in.read(buffer, 0, len);
+                           String content=new String(buffer, 0, len)+": ";
+                           len = in.readInt();
+                           in.read(buffer, 0, len);
+                           content +=new String(buffer, 0, len);
+                           ui.msgShow(content);
+                       }
                     }
                 } catch (IOException | ClassNotFoundException ex) {
                     System.out.println(ex.getMessage());
@@ -95,18 +107,28 @@ public class KidPaint extends JFrame {
 
             while (true) {
                 Object[] change = ui.getChange();
-                out.writeInt((int) change[1]);
-                LinkedList<Point> points=(LinkedList<Point>)change[0];
-                out.writeInt(points.size());
-                LinkedList<Point> point=new LinkedList<>();
-                for(int i=0; i<points.size();i++){
-                    point.add(points.get(i));
-                    out.writeInt(ByteArrayParser.object2Byte(point).length);
-                    out.write(ByteArrayParser.object2Byte(point));
-                    point.pop();
+                if(change.length==2) {
+                    out.writeInt(2);
+                    out.writeInt((int) change[1]);
+                    LinkedList<Point> points = (LinkedList<Point>) change[0];
+                    out.writeInt(points.size());
+                    LinkedList<Point> point = new LinkedList<>();
+                    for (int i = 0; i < points.size(); i++) {
+                        point.add(points.get(i));
+                        out.writeInt(ByteArrayParser.object2Byte(point).length);
+                        out.write(ByteArrayParser.object2Byte(point));
+                        point.pop();
+                    }
+                }else{
+                    out.writeInt(1);
+                    String str =(String)change[0];
+                    out.writeInt(name.length());
+                    out.write(name.getBytes(),0,name.length());
+                    out.writeInt(str.length());
+                    out.write(str.getBytes(), 0, str.length());
                 }
             }
-            
+
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
@@ -146,7 +168,8 @@ public class KidPaint extends JFrame {
             public void keyReleased(KeyEvent e) {
                 if (e.getKeyCode() == 10) {        // if the user press ENTER
                     try {
-                        sendMsg(nameField.getText(), "255.255.255.255", 12345);
+                        name=nameField.getText();
+                        sendMsg("", "255.255.255.255", 12345);
                     } catch (IOException exception) {
                         System.out.println(exception.getMessage());
                     }
