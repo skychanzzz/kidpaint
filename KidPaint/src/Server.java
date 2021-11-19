@@ -1,8 +1,10 @@
+import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class Server {
     DatagramSocket socket;
@@ -20,7 +22,7 @@ public class Server {
                 System.out.println("wait");
                 DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
                 socket.receive(packet);
-                Thread t = new Thread(()->receive(packet));
+                Thread t = new Thread(() -> receive(packet));
                 t.start();
             }
         } catch (IOException e) {
@@ -36,17 +38,17 @@ public class Server {
 
     public void receive(DatagramPacket packet) {     //for UDP
         try {
-                byte[] data = packet.getData();
-                String name = new String(data, 0, packet.getLength());      //receive the name of the client
+            byte[] data = packet.getData();
+            String name = new String(data, 0, packet.getLength());      //receive the name of the client
 
-                String srcAddr = "";
-                for (int i = 1; i < packet.getAddress().toString().length(); i++) {
-                    srcAddr += packet.getAddress().toString().charAt(i);
-                }
+            String srcAddr = "";
+            for (int i = 1; i < packet.getAddress().toString().length(); i++) {
+                srcAddr += packet.getAddress().toString().charAt(i);
+            }
 
-                sendMsg("ACK", srcAddr, packet.getPort());
+            sendMsg("ACK", srcAddr, packet.getPort());
 
-                tcpTransmission(name);
+            tcpTransmission(name);
         } catch (IOException e) {
             e.getMessage();
         }
@@ -75,46 +77,51 @@ public class Server {
                 });
                 t.start();
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             System.err.println("connection dropped.");
         }
     }
 
 
     private void serve(Socket clientSocket, String name) throws IOException {
-            System.out.printf("Established a connection to host %s:%d\n\n",
-                    clientSocket.getInetAddress(), clientSocket.getPort());
-            DataInputStream in = new DataInputStream(clientSocket.getInputStream());
-            DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
-            for (int j = 0; j < data.length; j++) {
-                for (int i = 0; i < data[j].length; i++) {
-                    out.writeInt(data[j][i]);               //send sketchpad data
-                }
+        System.out.printf("Established a connection to host %s:%d\n\n",
+                clientSocket.getInetAddress(), clientSocket.getPort());
+        DataInputStream in = new DataInputStream(clientSocket.getInputStream());
+        DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+        for (int j = 0; j < data.length; j++) {
+            for (int i = 0; i < data[j].length; i++) {
+                out.writeInt(data[j][i]);               //send sketchpad data
             }
+        }
 
-          byte[] buffer = new byte[1024];
+        byte[] buffer = new byte[1024];
 
-            while(true){
-             int len = in.readInt();
-             in.read(buffer, 0, len);
-             int color=in.readInt();
-             forward(clientSocket,name,buffer,len,color);
+        while (true) {
+            int color = in.readInt();
+            int size=in.readInt();
+            for(int i=0;i<size;i++) {
+                int len = in.readInt(); //total length of linedList
+//                System.out.println(len);
+                in.read(buffer, 0, len);
+                forward(clientSocket, name, buffer, len, color);
             }
+        }
 
     }
 
-    private void forward(Socket clientSocket, String name,byte[] data, int len, int color) {
+    private void forward(Socket clientSocket, String name, byte[] data, int len, int color) {
         synchronized (list) {
             for (int i = 0; i < list.size(); i++) {
                 try {
                     Socket socket = list.get(i);
-                    if(clientSocket.equals(socket)) continue;
+                    if (clientSocket.equals(socket)) continue;
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 //                    out.writeInt(name.length());
 //                    out.write(name.getBytes(), 0, name.length());
+                    out.writeInt(color);
                     out.writeInt(len);
                     out.write(data, 0, len);
-                    out.writeInt(color);
+//                    out.writeInt(color);
                 } catch (IOException e) {
                     // the connection is dropped but the socket is not yet removed.
                 }

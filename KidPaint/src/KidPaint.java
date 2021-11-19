@@ -73,20 +73,20 @@ public class KidPaint extends JFrame {
                 byte[] buffer = new byte[1024];
                 try {
                     while (true) {
+                        ui.selectColor(in.readInt());
                         int len = in.readInt();
                         in.read(buffer, 0, len);
-                        byte[] object=new byte[len];
-                        for(int i=0;i<len;i++){
-                            object[i]=buffer[i];
+                        byte[] object = new byte[len];
+                        for (int i = 0; i < len; i++) {
+                            object[i] = buffer[i];
                         }
-                        LinkedList<Point> point=(LinkedList<Point>)ByteArrayParser.byte2Object(object);
-                        int color = in.readInt();
-                        ui.selectColor(color);
-                       for(int i=0;i<point.size();i++){
-                           ui.paintPixel(point.get(i).x,point.get(i).y);
-                       }
+                        LinkedList<Point> point = (LinkedList<Point>) ByteArrayParser.byte2Object(object);
+                        for (int i = 0; i < point.size(); i++) {
+                            ui.paintPixel(point.get(i).x, point.get(i).y);
+                        }
                     }
                 } catch (IOException | ClassNotFoundException ex) {
+                    System.out.println(ex.getMessage());
                     System.err.println("Connection dropped!");
                     System.exit(-1);
                 }
@@ -94,11 +94,19 @@ public class KidPaint extends JFrame {
             t.start();
 
             while (true) {
-                  Object[] change = ui.getChange();
-                    out.writeInt(ByteArrayParser.object2Byte(change[0]).length);
-                    out.write(ByteArrayParser.object2Byte(change[0]));
-                    out.writeInt((int) change[1]);
+                Object[] change = ui.getChange();
+                out.writeInt((int) change[1]);
+                LinkedList<Point> points=(LinkedList<Point>)change[0];
+                out.writeInt(points.size());
+                LinkedList<Point> point=new LinkedList<>();
+                for(int i=0; i<points.size();i++){
+                    point.add(points.get(i));
+                    out.writeInt(ByteArrayParser.object2Byte(point).length);
+                    out.write(ByteArrayParser.object2Byte(point));
+                    point.pop();
+                }
             }
+            
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
@@ -150,7 +158,6 @@ public class KidPaint extends JFrame {
         });
         this.setVisible(true);
     }
-
 
 
     public static void main(String[] args) {
