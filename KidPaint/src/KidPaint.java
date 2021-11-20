@@ -39,7 +39,7 @@ public class KidPaint extends JFrame {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             socket.receive(packet);
             byte[] data = packet.getData();
-            String str = new String(data, 0, packet.getLength());       // receive the ACK from Server by UDP
+            String str = new String(data, 0, packet.getLength());       // receive the ACK from Server.Server by UDP
             if (str.equals("ACK")) {
                 for (int i = 1; i < packet.getAddress().toString().length(); i++) {
                     serverAddr += packet.getAddress().toString().charAt(i);         // to get the IP address of server
@@ -134,7 +134,6 @@ public class KidPaint extends JFrame {
         }
     }
 
-
     public int[][] getData() {
         return data;
     }
@@ -181,7 +180,6 @@ public class KidPaint extends JFrame {
         });
         this.setVisible(true);
     }
-
 
     public static void main(String[] args) {
         KidPaint client = new KidPaint(23451);
