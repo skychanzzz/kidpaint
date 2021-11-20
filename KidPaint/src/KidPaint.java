@@ -1,3 +1,5 @@
+import util.ByteArrayParser;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -11,18 +13,27 @@ import java.util.LinkedList;
 
 
 public class KidPaint extends JFrame {
-    DatagramSocket socket;
+    DatagramSocket udpSocket;
     Socket tcpSocket;
-    private String serverAddr = "";
-    private int[][] data = new int[50][50];
     private String name;
     UI ui;          // get the instance of UI
 
 
     public KidPaint(int port) {
         try {
-            socket = new DatagramSocket(port);
+            udpSocket = new DatagramSocket(port);
             showNamePanel();
+
+            String serverAddr = "";
+            while (true) {
+                if(serverAddr.equals("")) {
+                    System.out.println("\nWaiting for rooms information...");
+                    serverAddr = this.receiveRoomAddress();
+                }else {
+                    System.out.println("\nWaiting for room response...");
+                    tcpTransmission(serverAddr);      // tcp operation
+                }
+            }
         } catch (IOException e) {
             System.out.printf("the %d is being used by another", port);
         }
@@ -31,44 +42,40 @@ public class KidPaint extends JFrame {
     public void sendMsg(String str, String destIP, int port) throws IOException {
         InetAddress destination = InetAddress.getByName(destIP);
         DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), destination, port);
-        socket.send(packet);
+        udpSocket.send(packet);
     }
 
-    public void receive() {
+    public String receiveRoomAddress() {
         try {
+            String serverAddr = "";
+
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
-            socket.receive(packet);
+            udpSocket.receive(packet);
             byte[] data = packet.getData();
             String str = new String(data, 0, packet.getLength());       // receive the ACK from Server.Server by UDP
             if (str.equals("ACK")) {
                 for (int i = 1; i < packet.getAddress().toString().length(); i++) {
                     serverAddr += packet.getAddress().toString().charAt(i);         // to get the IP address of server
                 }
-                socket.close();         //UDP close
-                tcpTransmission();      // tcp operation
+                udpSocket.close();         //UDP close
+                return serverAddr;
             }
 
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-
+        return "";
     }
 
 
-    private void tcpTransmission() {
+    private void tcpTransmission(String serverAddr) {
         try {
             tcpSocket = new Socket(serverAddr, 45678);
             DataInputStream in = new DataInputStream(tcpSocket.getInputStream());
             DataOutputStream out = new DataOutputStream(tcpSocket.getOutputStream());
 
-            for (int j = 0; j < data.length; j++) {
-                for (int i = 0; i < data[j].length; i++) {
-                    data[j][i] = in.readInt();
-                }
-            }
-            ui = UI.getInstance();
-            ui.setData(getData(), 20);    // set the data array and block size. comment this statement to use the default data array and block size.
-            ui.setVisible(true);                // set the ui
+            int[][] sketchData = fetchSketchData(in);
+            redrawUI(sketchData);
 
             Thread t = new Thread(() -> {
                 byte[] buffer = new byte[1024];
@@ -134,12 +141,20 @@ public class KidPaint extends JFrame {
         }
     }
 
-    public int[][] getData() {
-        return data;
+    private void redrawUI(int[][] sketchData) {
+        ui = UI.getInstance();
+        ui.setData(sketchData, 20);    // set the data array and block size. comment this statement to use the default data array and block size.
+        ui.setVisible(true);                // set the ui
     }
 
-    public String getServerAddr() {
-        return serverAddr;
+    private int[][] fetchSketchData(DataInputStream in) throws IOException {
+        int[][] sketchData = new int[50][50];
+        for (int j = 0; j < sketchData.length; j++) {
+            for (int i = 0; i < sketchData[j].length; i++) {
+                sketchData[j][i] = in.readInt();
+            }
+        }
+        return sketchData;
     }
 
     public void showNamePanel() {
@@ -183,15 +198,5 @@ public class KidPaint extends JFrame {
 
     public static void main(String[] args) {
         KidPaint client = new KidPaint(23451);
-        while (client.getServerAddr().equals("")) {
-            System.out.println("\nWaiting for data...");
-            client.receive();
-        }
-
-//        UI ui = UI.getInstance();            // get the instance of UI
-//        ui.setData(client.getData(), 20);    // set the data array and block size. comment this statement to use the default data array and block size.
-//        ui.setVisible(true);                // set the ui
-
-
     }
 }
