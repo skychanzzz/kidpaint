@@ -2,6 +2,7 @@ package util;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class ByteArrayParser {
@@ -17,6 +18,8 @@ public class ByteArrayParser {
         ObjectInputStream ois = new ObjectInputStream(bais);
         return ois.readObject();
     }
+
+
     public static byte[] list2Byte(List list) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(0);
         DataOutputStream baosOut = new DataOutputStream(baos);
@@ -32,7 +35,7 @@ public class ByteArrayParser {
     }
 
     public static List byte2List(byte[] data) throws IOException {
-        List<Object> objectList = new ArrayList<>();
+        List<Object> objectList = new LinkedList<>();
 
         ByteArrayInputStream bais = new ByteArrayInputStream(data);
         DataInputStream in = new DataInputStream(bais);

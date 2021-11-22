@@ -38,9 +38,7 @@ public class MasterServer {
             for (int i = 1; i < packet.getAddress().toString().length(); i++) {
                 srcAddr += packet.getAddress().toString().charAt(i);
             }
-
             sendMsg("ACK", srcAddr, packet.getPort());
-
             room.start();
         } catch (IOException e) {
             e.getMessage();

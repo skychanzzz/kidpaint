@@ -1,5 +1,8 @@
 package Server;
 
+import GameObject.Sketchpad;
+import util.ByteArrayParser;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -53,47 +56,37 @@ public class RoomServer {
                 cSocket.getInetAddress(), cSocket.getPort());
         DataInputStream clientIn = new DataInputStream(cSocket.getInputStream());
         DataOutputStream clientOut = new DataOutputStream(cSocket.getOutputStream());
-        for (int j = 0; j < sketchData.length; j++) {
-            for (int i = 0; i < sketchData[j].length; i++) {
-                clientOut.writeInt(sketchData[j][i]);               //send sketchpad data
-            }
-        }
 
-        byte[] buffer = new byte[1024];
+        Sketchpad pad = new Sketchpad(sketchData);
+        byte[] padByte = ByteArrayParser.object2Byte(pad);
+        forwardObj2Self(clientOut, padByte, padByte.length);
 
         while (true) {
             int mode=clientIn.readInt();
 
             if(mode==2) {
-                int color = clientIn.readInt();
-                int size = clientIn.readInt();
-                for (int i = 0; i < size; i++) {
-                    int len = clientIn.readInt(); //total length of linedList
-                    clientIn.read(buffer, 0, len);
-                    forward(cSocket, buffer, len, color);
-                }
+                int objSize = clientIn.readInt();
+                byte[] objByte = new byte[objSize];
+                clientIn.read(objByte, 0, objSize);
+                forwardObj2All(cSocket, 2,  objByte, objSize);
             }else{
-                int len = clientIn.readInt();
-                clientIn.read(buffer, 0, len);
-                String cName = new String(buffer,0,len);
-                len = clientIn.readInt();
-                clientIn.read(buffer, 0, len);
-                forward(cSocket,cName ,buffer, len);
+                int objSize = clientIn.readInt();
+                byte[] objByte = new byte[objSize];
+                clientIn.read(objByte, 0, objSize);
+                forwardObj2All(cSocket, 1,  objByte, objSize);
             }
         }
 
     }
 
-
-    protected void forward(Socket cSocket,  byte[] data, int len, int color) {
+    protected void forwardObj2All(Socket cSocket, int id, byte[] data, int len) {
         synchronized (clients) {
             for (int i = 0; i < clients.size(); i++) {
                 try {
                     Socket socket = clients.get(i);
                     if (cSocket.equals(socket)) continue;
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                    out.writeInt(2);
-                    out.writeInt(color);
+                    out.writeInt(id);
                     out.writeInt(len);
                     out.write(data, 0, len);
                 } catch (IOException e) {
@@ -102,26 +95,16 @@ public class RoomServer {
             }
         }
     }
-
-    protected void forward(Socket cSocket, String cName, byte[] data, int len) {
-        synchronized (clients) {
-            for (int i = 0; i < clients.size(); i++) {
-                try {
-                    Socket socket = clients.get(i);
-                    if(cSocket.equals(socket)) continue;
-                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                    out.writeInt(1);
-                    out.writeInt(cName.length());
-                    out.write(cName.getBytes(), 0, cName.length());
-                    out.writeInt(len);
-                    out.write(data, 0, len);
-                } catch (IOException e) {
-                    // the connection is dropped but the socket is not yet removed.
-                }
-            }
+    protected void forwardObj2Self(DataOutputStream out, byte[] data, int len) {
+        try {
+            System.out.println(len);
+            out.writeInt(-1);
+            out.writeInt(len);
+            out.write(data, 0, len);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
     //Getter
     protected int getPort() { return this.srvSocket.getLocalPort(); }
 }
