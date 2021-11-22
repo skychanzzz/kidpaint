@@ -62,31 +62,20 @@ public class RoomServer {
         forwardObj2Self(clientOut, padByte, padByte.length);
 
         while (true) {
-            int mode=clientIn.readInt();
-
-            if(mode==2) {
-                int objSize = clientIn.readInt();
-                byte[] objByte = new byte[objSize];
-                clientIn.read(objByte, 0, objSize);
-                forwardObj2All(cSocket, 2,  objByte, objSize);
-            }else{
-                int objSize = clientIn.readInt();
-                byte[] objByte = new byte[objSize];
-                clientIn.read(objByte, 0, objSize);
-                forwardObj2All(cSocket, 1,  objByte, objSize);
-            }
+            int objSize = clientIn.readInt();
+            byte[] objByte = new byte[objSize];
+            clientIn.read(objByte, 0, objSize);
+            forwardObj2All(cSocket, objByte, objSize);
         }
-
     }
 
-    protected void forwardObj2All(Socket cSocket, int id, byte[] data, int len) {
+    protected void forwardObj2All(Socket cSocket, byte[] data, int len) {
         synchronized (clients) {
             for (int i = 0; i < clients.size(); i++) {
                 try {
                     Socket socket = clients.get(i);
                     if (cSocket.equals(socket)) continue;
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                    out.writeInt(id);
                     out.writeInt(len);
                     out.write(data, 0, len);
                 } catch (IOException e) {
@@ -95,16 +84,18 @@ public class RoomServer {
             }
         }
     }
+
     protected void forwardObj2Self(DataOutputStream out, byte[] data, int len) {
         try {
-            System.out.println(len);
-            out.writeInt(-1);
             out.writeInt(len);
             out.write(data, 0, len);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     //Getter
-    protected int getPort() { return this.srvSocket.getLocalPort(); }
+    protected int getPort() {
+        return this.srvSocket.getLocalPort();
+    }
 }
