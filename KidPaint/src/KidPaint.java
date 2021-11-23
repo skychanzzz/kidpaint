@@ -25,17 +25,15 @@ public class KidPaint extends JFrame implements IObserver {
         client = Client.getInstance();
         ui = UI.getInstance();
 
+        client.subscribe(this);
+
         showNamePanel();
 
-        String serverAddr = "";
-        while (true) {
-            if (serverAddr.equals("")) {
-                System.out.println("\nWaiting for rooms information...");
-                serverAddr = this.client.receiveRoomAddress();
-            } else {
-                System.out.println("\nWaiting for room response...");
-                tcpTransmission(serverAddr);      // tcp operation
-            }
+        client.runServ();
+        try {
+            serveUIChange();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -50,36 +48,16 @@ public class KidPaint extends JFrame implements IObserver {
         }
     }
 
-
-    private void tcpTransmission(String serverAddr) {
-        try {
-            Socket tcpSocket = new Socket(serverAddr, 45678);
-            DataInputStream in = new DataInputStream(tcpSocket.getInputStream());
-            DataOutputStream out = new DataOutputStream(tcpSocket.getOutputStream());
-
-            Thread t = new Thread(() -> {
-                while (true) {
-                    ISerializableGameObject go = readServerGO(in);
-
-                    //later implement observer pattern
-                    updateGameObject(go);
-                }
-            });
-            t.start();
-
-            while (true) {
-                Object[] change = ui.getChange();
-                if (change.length == 2) {
-                    Pen pen = new Pen((int) change[1], (LinkedList<Point>) change[0]);
-                    writeServerGO(out, pen);
-                } else {
-                    Message msg = new Message(name, (String) change[0]);
-                    writeServerGO(out, msg);
-                }
+    private void serveUIChange() throws IOException {
+        while (true) {
+            Object[] change = ui.getChange();
+            if (change.length == 2) {
+                Pen pen = new Pen((int) change[1], (LinkedList<Point>) change[0]);
+                client.writeServerGO(pen);
+            } else {
+                Message msg = new Message(name, (String) change[0]);
+                client.writeServerGO(msg);
             }
-
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
         }
     }
 
@@ -95,32 +73,6 @@ public class KidPaint extends JFrame implements IObserver {
         LinkedList<Point> padPoints = pen.points;
         for (int i = 0; i < padPoints.size(); i++) {
             ui.paintPixel(padPoints.get(i).x, padPoints.get(i).y);
-        }
-    }
-
-    private ISerializableGameObject readServerGO(DataInputStream in) {
-        int len = 0;
-        try {
-            len = in.readInt();
-            byte[] objByte = new byte[len];
-            in.read(objByte, 0, len);
-            return (ISerializableGameObject) ByteArrayParser.byte2Object(objByte);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private void writeServerGO(DataOutputStream out, ISerializableGameObject serializableGO) {
-        byte[] GOBytes = new byte[0];
-        try {
-            GOBytes = ByteArrayParser.object2Byte(serializableGO);
-            out.writeInt(GOBytes.length);
-            out.write(GOBytes);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
