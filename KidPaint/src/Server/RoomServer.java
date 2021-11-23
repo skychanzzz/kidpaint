@@ -17,7 +17,7 @@ public class RoomServer {
     protected String name;
 
     protected RoomServer(String name) throws IOException {
-        this.srvSocket = new ServerSocket();
+        this.srvSocket = new ServerSocket(0);
         clients = new ArrayList<>();
         this.name = name;
         sketchData = new int[50][50];

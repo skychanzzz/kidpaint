@@ -1,5 +1,9 @@
 package Server;
 
+import GameObject.Room;
+import util.JavaNetwork;
+
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -46,7 +50,9 @@ public class MasterServer {
                 try {
                     System.out.println("Wait client to connect to master tcp...");
                     Socket cSocket = srvSocket.accept();
-                    System.out.println("oisc" + cSocket.toString());
+                    DataOutputStream tcpOut = new DataOutputStream(cSocket.getOutputStream());
+                    Room room = new Room(rooms.get(0).name, rooms.get(0).getPort());
+                    JavaNetwork.writeServerGO(tcpOut, room);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

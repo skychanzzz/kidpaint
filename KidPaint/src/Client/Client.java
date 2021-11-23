@@ -1,8 +1,10 @@
 package Client;
 
 import GameObject.ISerializableGameObject;
+import GameObject.Room;
 import util.ByteArrayParser;
 import util.IObserver;
+import util.JavaNetwork;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -19,7 +21,7 @@ public class Client implements IObserver{
     public DataInputStream tcpIn;
     public DataOutputStream tcpOut;
 
-    List<Integer> roomPorts;
+    List<Room> rooms;
     List<IObserver> observers;
 
     //Singleton
@@ -63,6 +65,7 @@ public class Client implements IObserver{
                 serverAddr = this.receiveMasterTcp();
             } else {
                 String[] serverInfo = serverAddr.split("\\:");
+                rooms = new ArrayList<>();
                 subscribe(this);
                 ConnectToTcpServer(serverInfo[0], Integer.parseInt(serverInfo[1]));
                 return serverAddr;
@@ -96,7 +99,6 @@ public class Client implements IObserver{
 
     private String receiveMasterTcp() {
         try {
-            roomPorts = new ArrayList<>();
             String serverAddr = "";
 
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
@@ -118,35 +120,19 @@ public class Client implements IObserver{
     }
 
     private ISerializableGameObject readServerGO() {
-        int len = 0;
-        try {
-            len = tcpIn.readInt();
-            byte[] objByte = new byte[len];
-            tcpIn.read(objByte, 0, len);
-            return (ISerializableGameObject) ByteArrayParser.byte2Object(objByte);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return JavaNetwork.readServerGO(this.tcpIn);
     }
 
     public void writeServerGO(ISerializableGameObject serializableGO) {
-        if (this.tcpOut == null) return;
-        byte[] GOBytes = new byte[0];
-        try {
-            GOBytes = ByteArrayParser.object2Byte(serializableGO);
-            this.tcpOut.writeInt(GOBytes.length);
-            this.tcpOut.write(GOBytes);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        JavaNetwork.writeServerGO(this.tcpOut, serializableGO);
     }
 
     //Observe to self
     @Override
     public void updateGameObject(ISerializableGameObject GO) {
-        System.out.println("Update in client");
+        if(GO instanceof Room && rooms !=null) {
+            rooms.add((Room) GO);
+            System.out.println(rooms);
+        }
     }
 }
