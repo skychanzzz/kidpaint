@@ -2,23 +2,24 @@ package Server;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 public class MasterServer {
     DatagramSocket socket;
-
-    //Add
-    RoomServer room;
-    //
-
-    ServerSocket srvSocket;
-    ArrayList<Socket> list = new ArrayList<>();
+    ArrayList<RoomServer> rooms;
+    int tcpPort = 11111;
 
     public MasterServer(int port) {
         try {
             socket = new DatagramSocket(port);
-
-            room = new RoomServer();
+            rooms = new ArrayList<>();
+            RoomServer room1 = new RoomServer("Room1");
+            RoomServer room2 = new RoomServer("Room2");
+            RoomServer room3 = new RoomServer("Room3");
+            rooms.add(room1);
+            rooms.add(room2);
+            rooms.add(room3);
 
             while (true) {
                 System.out.println("wait");
@@ -38,16 +39,29 @@ public class MasterServer {
             for (int i = 1; i < packet.getAddress().toString().length(); i++) {
                 srcAddr += packet.getAddress().toString().charAt(i);
             }
-            sendMsg("ACK", srcAddr, packet.getPort());
-            room.start();
+
+            ServerSocket srvSocket = new ServerSocket(tcpPort);
+
+            Thread t = new Thread(() -> {
+                try {
+                    System.out.println("Wait client to connect to master tcp...");
+                    Socket cSocket = srvSocket.accept();
+                    System.out.println("oisc" + cSocket.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            t.start();
+
+            sendMsg(String.valueOf(srvSocket.getLocalPort()).getBytes(), srcAddr, packet.getPort());
         } catch (IOException e) {
             e.getMessage();
         }
     }
 
-    public void sendMsg(String str, String destIP, int port) throws IOException {
+    public void sendMsg(byte[] msg, String destIP, int port) throws IOException {
         InetAddress destination = InetAddress.getByName(destIP);
-        DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), destination, port);
+        DatagramPacket packet = new DatagramPacket(msg, msg.length, destination, port);
         socket.send(packet);
     }
 

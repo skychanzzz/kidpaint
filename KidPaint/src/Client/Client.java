@@ -11,7 +11,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Client {
+public class Client implements IObserver{
     private static Client instance;
 
     DatagramSocket udpSocket;
@@ -19,11 +19,12 @@ public class Client {
     public DataInputStream tcpIn;
     public DataOutputStream tcpOut;
 
+    List<Integer> roomPorts;
     List<IObserver> observers;
 
     //Singleton
     public static Client getInstance() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new Client();
         }
         return instance;
@@ -50,7 +51,8 @@ public class Client {
 
     public void runServ() {
         String serverAddr = ConnectToMaster();
-        ConnectToRoom(serverAddr);
+        System.out.println(serverAddr);
+        //ConnectToRoom(serverAddr);
     }
 
     private String ConnectToMaster() {
@@ -58,18 +60,20 @@ public class Client {
         while (true) {
             if (serverAddr.equals("")) {
                 System.out.println("\nWaiting for rooms information...");
-                serverAddr = this.receiveRoomAddress();
+                serverAddr = this.receiveMasterTcp();
             } else {
-                System.out.println("\nWaiting for room response...");
+                String[] serverInfo = serverAddr.split("\\:");
+                subscribe(this);
+                ConnectToTcpServer(serverInfo[0], Integer.parseInt(serverInfo[1]));
                 return serverAddr;
             }
         }
     }
 
-    private void ConnectToRoom(String serverAddr) {
+    private void ConnectToTcpServer(String serverAddr, int port) {
         Socket tcpSocket = null;
         try {
-            tcpSocket = new Socket(serverAddr, 45678);
+            tcpSocket = new Socket(serverAddr, port);
             this.tcpIn = new DataInputStream(tcpSocket.getInputStream());
             this.tcpOut = new DataOutputStream(tcpSocket.getOutputStream());
 
@@ -90,21 +94,22 @@ public class Client {
     }
 
 
-    private String receiveRoomAddress() {
+    private String receiveMasterTcp() {
         try {
+            roomPorts = new ArrayList<>();
             String serverAddr = "";
 
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             udpSocket.receive(packet);
             byte[] data = packet.getData();
             String str = new String(data, 0, packet.getLength());       // receive the ACK from Server.Server by UDP
-            if (str.equals("ACK")) {
-                for (int i = 1; i < packet.getAddress().toString().length(); i++) {
-                    serverAddr += packet.getAddress().toString().charAt(i);         // to get the IP address of server
-                }
-                udpSocket.close();         //UDP close
-                return serverAddr;
+
+            for (int i = 1; i < packet.getAddress().toString().length(); i++) {
+                serverAddr += packet.getAddress().toString().charAt(i);         // to get the IP address of server
             }
+            udpSocket.close();         //UDP close
+            this.udpSocket = null;
+            return serverAddr + ":" + str;
 
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -128,7 +133,7 @@ public class Client {
     }
 
     public void writeServerGO(ISerializableGameObject serializableGO) {
-        if(this.tcpOut == null) return;
+        if (this.tcpOut == null) return;
         byte[] GOBytes = new byte[0];
         try {
             GOBytes = ByteArrayParser.object2Byte(serializableGO);
@@ -137,5 +142,11 @@ public class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    //Observe to self
+    @Override
+    public void updateGameObject(ISerializableGameObject GO) {
+        System.out.println("Update in client");
     }
 }

@@ -14,10 +14,12 @@ public class RoomServer {
     protected ServerSocket srvSocket;
     protected int[][] sketchData;
     protected ArrayList<Socket> clients;
+    protected String name;
 
-    protected RoomServer() throws IOException {
-        this.srvSocket = new ServerSocket(45678);
+    protected RoomServer(String name) throws IOException {
+        this.srvSocket = new ServerSocket();
         clients = new ArrayList<>();
+        this.name = name;
         sketchData = new int[50][50];
         sketchData[0][0] = -543230;
         sketchData[1][1] = -543230;
