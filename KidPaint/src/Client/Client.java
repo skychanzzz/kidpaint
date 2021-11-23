@@ -21,8 +21,9 @@ public class Client implements IObserver{
     public DataInputStream tcpIn;
     public DataOutputStream tcpOut;
 
-    List<Room> rooms;
+    public List<Room> rooms;
     List<IObserver> observers;
+    private String serverAddr;
 
     //Singleton
     public static Client getInstance() {
@@ -36,8 +37,11 @@ public class Client implements IObserver{
         try {
             observers = new ArrayList<>();
             udpSocket = new DatagramSocket();
+            this.sendMsg("", "255.255.255.255", 12345);
         } catch (SocketException e) {
             System.out.printf("udpSocket error on client init process:\n " + e.getStackTrace());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -52,9 +56,7 @@ public class Client implements IObserver{
     }
 
     public void runServ() {
-        String serverAddr = ConnectToMaster();
-        System.out.println(serverAddr);
-        //ConnectToRoom(serverAddr);
+        this.serverAddr = ConnectToMaster();
     }
 
     private String ConnectToMaster() {
@@ -68,7 +70,16 @@ public class Client implements IObserver{
                 rooms = new ArrayList<>();
                 subscribe(this);
                 ConnectToTcpServer(serverInfo[0], Integer.parseInt(serverInfo[1]));
-                return serverAddr;
+                return serverInfo[0];
+            }
+        }
+    }
+
+    public void joinRoom(String roomName) {
+        for(Room room : rooms) {
+            if(room.name.equals(roomName)) {
+                ConnectToTcpServer(this.serverAddr, room.port);
+                break;
             }
         }
     }
@@ -132,7 +143,6 @@ public class Client implements IObserver{
     public void updateGameObject(ISerializableGameObject GO) {
         if(GO instanceof Room && rooms !=null) {
             rooms.add((Room) GO);
-            System.out.println(rooms);
         }
     }
 }

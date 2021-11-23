@@ -28,7 +28,7 @@ public class RoomServer {
     protected void start() {
         try {
             while (true) {
-                System.out.println("Listening at port 45678...");
+                System.out.println("Room listening at port " + getPort());
                 Socket cSocket = srvSocket.accept();
                 synchronized (clients) {
                     clients.add(cSocket);

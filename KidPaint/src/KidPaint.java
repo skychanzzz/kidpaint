@@ -1,18 +1,18 @@
 import Client.Client;
-import GameObject.ISerializableGameObject;
-import GameObject.Message;
-import GameObject.Pen;
-import GameObject.Sketchpad;
+import GameObject.*;
 import util.ByteArrayParser;
 import util.IObserver;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.*;
 import java.net.Socket;
 import java.util.LinkedList;
+import java.util.List;
 
 
 public class KidPaint extends JFrame implements IObserver {
@@ -23,18 +23,13 @@ public class KidPaint extends JFrame implements IObserver {
 
     public KidPaint() {
         client = Client.getInstance();
-        ui = UI.getInstance();
 
         client.subscribe(this);
 
+        this.ui = UI.getInstance();
         showNamePanel();
 
         client.runServ();
-        try {
-            serveUIChange();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -106,14 +101,11 @@ public class KidPaint extends JFrame implements IObserver {
             @Override
             public void keyReleased(KeyEvent e) {
                 if (e.getKeyCode() == 10) {        // if the user press ENTER
-                    try {
-                        name = nameField.getText();
-                        client.sendMsg("", "255.255.255.255", 12345);
-                    } catch (IOException exception) {
-                        System.out.println(exception.getMessage());
-                    }
+                    name = nameField.getText();
                     System.out.println(nameField.getText());
+
                     dispose();
+                    setUI(client.rooms);
                 }
             }
 
@@ -121,9 +113,90 @@ public class KidPaint extends JFrame implements IObserver {
         this.setVisible(true);
     }
 
-    public static void main(String[] args) {
-        KidPaint client = new KidPaint();
+    private void setUI(List<Room> rooms) {
+        this.setTitle("KidsPaint");
+        this.setSize(400, 370);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        Container container = this.getContentPane();
+        container.setLayout(new FlowLayout());
+
+        JPanel roomListPanel = new JPanel(new GridLayout(0, 1));
+
+        for(Room room: rooms) {
+            JButton roomBtn = new JButton(room.name);
+            roomBtn.setPreferredSize(new Dimension(300, 30));
+            roomBtn.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    dispose();
+                    client.joinRoom(roomBtn.getText());
+
+                    Thread t = new Thread(() -> {
+                        try {
+                            serveUIChange();
+                        } catch (IOException ioException) {
+                            ioException.printStackTrace();
+                        }
+                    });
+                    t.start();
+                }
+            });
+            roomListPanel.add(roomBtn);
+        }
+
+        JScrollPane sp = new JScrollPane(roomListPanel,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        sp.setPreferredSize(new Dimension(350, 150));
+
+        container.add(sp);
+
+        JTextField roomName = new JTextField();
+        roomName.setPreferredSize(new Dimension(350, 30));
+        container.add(roomName);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(0, 1));
+        container.add(panel);
+        JButton createRoomBtn = new JButton("Create Room");
+        createRoomBtn.setFont(new Font("Serif", Font.BOLD, 20));
+        createRoomBtn.setBackground(new Color(255, 178, 102));
+        panel.add(createRoomBtn);
+
+        JButton joinRoomBtn = new JButton("Join Room");
+        joinRoomBtn.setFont(new Font("Serif", Font.BOLD, 20));
+        joinRoomBtn.setBackground(new Color(255, 178, 102));
+        panel.add(joinRoomBtn);
+        createRoomBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            }
+        });
+
+        joinRoomBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+
+                client.joinRoom(roomName.getText());
+
+                Thread t = new Thread(() -> {
+                    try {
+                        serveUIChange();
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
+                    }
+                });
+                t.start();
+            }
+        });
+
+        this.setVisible(true);
     }
 
 
+    public static void main(String[] args) {
+        KidPaint client = new KidPaint();
+    }
 }
