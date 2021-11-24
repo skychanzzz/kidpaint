@@ -7,19 +7,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class JavaNetwork {
-    public static ISerializableGameObject readServerGO(DataInputStream tcpIn) {
+    public static ISerializableGameObject readServerGO(DataInputStream tcpIn) throws IOException, ClassNotFoundException {
         int len = 0;
-        try {
-            len = tcpIn.readInt();
-            byte[] objByte = new byte[len];
-            tcpIn.read(objByte, 0, len);
-            return (ISerializableGameObject) ByteArrayParser.byte2Object(objByte);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
+        len = tcpIn.readInt();
+        byte[] objByte = new byte[len];
+        tcpIn.read(objByte, 0, len);
+        return (ISerializableGameObject) ByteArrayParser.byte2Object(objByte);
     }
 
     public static void writeServerGO(DataOutputStream tcpOut, ISerializableGameObject serializableGO) {

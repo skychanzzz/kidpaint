@@ -1,6 +1,8 @@
 package Server;
 
+import GameObject.ISerializableGameObject;
 import GameObject.Room;
+import util.ByteArrayParser;
 import util.JavaNetwork;
 
 import java.io.DataInputStream;
@@ -22,7 +24,6 @@ public class MasterServer {
             RoomServer room1 = new RoomServer("Room1");
             rooms.add(room1);
             Thread t1 = new Thread(() -> room1.start());
-            System.out.println(room1.getPort());
             t1.start();
 
             Thread udpThread = new Thread(() -> receiveBroadcast());
@@ -43,15 +44,45 @@ public class MasterServer {
             while (true) {
                 System.out.println("Wait client to connect to master tcp...");
                 Socket cSocket = this.srvSocket.accept();
-                
+                DataInputStream tcpIn = new DataInputStream(cSocket.getInputStream());
                 DataOutputStream tcpOut = new DataOutputStream(cSocket.getOutputStream());
-                for (RoomServer room : rooms) {
-                    Room roomGO = new Room(room.name, room.getPort());
-                    JavaNetwork.writeServerGO(tcpOut, roomGO);
-                }
+
+                SendRooms(tcpOut);
+
+                new Thread(() -> {
+                    Room newRoom = getCreateRoomData(tcpIn);
+                    if (newRoom != null) {
+                        RoomServer room = new RoomServer(newRoom.name);
+                        rooms.add(room);
+                        new Thread(() -> room.start()).start();
+                        SendRooms(tcpOut);
+                    }
+                }).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private Room getCreateRoomData(DataInputStream tcpIn) {
+        try {
+            int objSize = tcpIn.readInt();
+            System.out.println("Object size is " + objSize);
+            if (objSize == -1) return null;
+            byte[] objByte = new byte[objSize];
+            tcpIn.read(objByte, 0, objSize);
+            Object GO = ByteArrayParser.byte2Object(objByte);
+            return (GO instanceof Room) ? (Room) GO : null;
+        } catch (IOException | ClassNotFoundException ioException) {
+            System.out.println("IO exception on create room");
+        }
+        return null;
+    }
+
+    private void SendRooms(DataOutputStream tcpOut) {
+        for (RoomServer room : rooms) {
+            Room roomGO = new Room(room.name, room.getPort());
+            JavaNetwork.writeServerGO(tcpOut, roomGO);
         }
     }
 

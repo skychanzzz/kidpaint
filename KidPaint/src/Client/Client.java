@@ -2,6 +2,7 @@ package Client;
 
 import GameObject.ISerializableGameObject;
 import GameObject.Room;
+import util.ByteArrayParser;
 import util.IObserver;
 import util.JavaNetwork;
 
@@ -12,11 +13,12 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Client implements IObserver{
+public class Client implements IObserver {
     private static Client instance;
 
     DatagramSocket udpSocket;
 
+    Socket tcpSocket;
     public DataInputStream tcpIn;
     public DataOutputStream tcpOut;
 
@@ -74,17 +76,28 @@ public class Client implements IObserver{
         }
     }
 
-    public void joinRoom(String roomName) {
-        for(Room room : rooms) {
-            if(room.name.equals(roomName)) {
+    public boolean joinRoom(String roomName) {
+        for (Room room : rooms) {
+            if (room.name.equals(roomName)) {
                 ConnectToTcpServer(this.serverAddr, room.port);
-                break;
+                return true;
             }
         }
+        return false;
+    }
+
+    public void createRoom(String roomName) {
+        Room newRoom = new Room(roomName, 0);
+        int roomCount = rooms.size();
+        JavaNetwork.writeServerGO(tcpOut, newRoom);
+
+        new Thread(() -> {
+            while (roomCount == rooms.size());
+            joinRoom(roomName);
+        }).start();
     }
 
     private void ConnectToTcpServer(String serverAddr, int port) {
-        Socket tcpSocket = null;
         try {
             tcpSocket = new Socket(serverAddr, port);
             this.tcpIn = new DataInputStream(tcpSocket.getInputStream());
@@ -92,7 +105,15 @@ public class Client implements IObserver{
 
             Thread t = new Thread(() -> {
                 while (true) {
-                    ISerializableGameObject go = readServerGO();
+                    ISerializableGameObject go = null;
+                    try {
+                        go = readServerGO();
+                    } catch (IOException ioException) {
+                        System.out.println("Server io crash");
+                        break;
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
 
                     for (IObserver observer : observers) {
                         observer.updateGameObject(go);
@@ -129,7 +150,7 @@ public class Client implements IObserver{
         return "";
     }
 
-    private ISerializableGameObject readServerGO() {
+    private ISerializableGameObject readServerGO() throws IOException, ClassNotFoundException {
         return JavaNetwork.readServerGO(this.tcpIn);
     }
 
@@ -140,8 +161,12 @@ public class Client implements IObserver{
     //Observe to self
     @Override
     public void updateGameObject(ISerializableGameObject GO) {
-        if(GO instanceof Room && rooms !=null) {
-            rooms.add((Room) GO);
+        if (GO instanceof Room && rooms != null) {
+            boolean hasRoom = false;
+            for(Room room: rooms) {
+                if(room.name.equals(((Room) GO).name)) hasRoom = true;
+            }
+            if(!hasRoom) rooms.add((Room) GO);
         }
     }
 }

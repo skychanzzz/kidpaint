@@ -171,15 +171,8 @@ public class KidPaint extends JFrame implements IObserver {
         createRoomBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-            }
-        });
-
-        joinRoomBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-
-                client.joinRoom(roomName.getText());
+               client.createRoom(roomName.getText());
+               dispose();
 
                 Thread t = new Thread(() -> {
                     try {
@@ -192,6 +185,25 @@ public class KidPaint extends JFrame implements IObserver {
             }
         });
 
+        joinRoomBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+
+                if(client.joinRoom(roomName.getText())) dispose();
+
+                Thread t = new Thread(() -> {
+                    try {
+                        serveUIChange();
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
+                    }
+                });
+                t.start();
+            }
+        });
+        JLabel message = new JLabel("Placeholder");
+        panel.add(message);
         this.setVisible(true);
     }
 

@@ -16,8 +16,12 @@ public class RoomServer {
     protected ArrayList<Socket> clients;
     protected String name;
 
-    protected RoomServer(String name) throws IOException {
-        this.srvSocket = new ServerSocket(0);
+    protected RoomServer(String name){
+        try {
+            this.srvSocket = new ServerSocket(0);
+        } catch (IOException ioException) {
+            System.out.println("Unable to create room due to IO");
+        }
         clients = new ArrayList<>();
         this.name = name;
         sketchData = new int[50][50];
