@@ -3,6 +3,7 @@ package Server;
 import GameObject.Room;
 import util.JavaNetwork;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.*;
@@ -24,38 +25,11 @@ public class MasterServer {
             System.out.println(room1.getPort());
             t1.start();
 
-            Thread udpThread = new Thread(() -> {
-                while (true) {
-                    System.out.println("wait");
-                    DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
-                    try {
-                        udpSocket.receive(packet);
-                    } catch (IOException ioException) {
-                        ioException.printStackTrace();
-                    }
-                    receive(packet);
-                }
-            });
+            Thread udpThread = new Thread(() -> receiveBroadcast());
             udpThread.start();
 
-            Thread t = new Thread(() -> {
-                try {
-                    this.srvSocket = new ServerSocket(tcpPort);
-                    while(true) {
-                        System.out.println("Wait client to connect to master tcp...");
-                        Socket cSocket = this.srvSocket.accept();
-                        DataOutputStream tcpOut = new DataOutputStream(cSocket.getOutputStream());
-
-                        for(RoomServer room: rooms) {
-                            Room roomGO = new Room(room.name, room.getPort());
-                            JavaNetwork.writeServerGO(tcpOut, roomGO);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            t.start();
+            Thread tcpThread = new Thread(() -> connectTcp());
+            tcpThread.start();
 
 
         } catch (IOException e) {
@@ -63,7 +37,38 @@ public class MasterServer {
         }
     }
 
-    public void receive(DatagramPacket packet) {     //for UDP
+    private void connectTcp() {
+        try {
+            this.srvSocket = new ServerSocket(tcpPort);
+            while (true) {
+                System.out.println("Wait client to connect to master tcp...");
+                Socket cSocket = this.srvSocket.accept();
+                
+                DataOutputStream tcpOut = new DataOutputStream(cSocket.getOutputStream());
+                for (RoomServer room : rooms) {
+                    Room roomGO = new Room(room.name, room.getPort());
+                    JavaNetwork.writeServerGO(tcpOut, roomGO);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void receiveBroadcast() {
+        while (true) {
+            System.out.println("Waiting for udp");
+            DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
+            try {
+                udpSocket.receive(packet);
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+            sendPortToSrc(packet);
+        }
+    }
+
+    private void sendPortToSrc(DatagramPacket packet) {     //for UDP
         try {
             String srcAddr = "";
             for (int i = 1; i < packet.getAddress().toString().length(); i++) {
@@ -76,7 +81,7 @@ public class MasterServer {
         }
     }
 
-    public void sendMsg(byte[] msg, String destIP, int port) throws IOException {
+    private void sendMsg(byte[] msg, String destIP, int port) throws IOException {
         InetAddress destination = InetAddress.getByName(destIP);
         DatagramPacket packet = new DatagramPacket(msg, msg.length, destination, port);
         udpSocket.send(packet);

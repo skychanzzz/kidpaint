@@ -2,7 +2,6 @@ package Client;
 
 import GameObject.ISerializableGameObject;
 import GameObject.Room;
-import util.ByteArrayParser;
 import util.IObserver;
 import util.JavaNetwork;
 
@@ -37,7 +36,7 @@ public class Client implements IObserver{
         try {
             observers = new ArrayList<>();
             udpSocket = new DatagramSocket();
-            this.sendMsg("", "255.255.255.255", 12345);
+            this.sendBroadcast();
         } catch (SocketException e) {
             System.out.printf("udpSocket error on client init process:\n " + e.getStackTrace());
         } catch (IOException e) {
@@ -49,9 +48,9 @@ public class Client implements IObserver{
         this.observers.add(observer);
     }
 
-    public void sendMsg(String str, String destIP, int port) throws IOException {
-        InetAddress destination = InetAddress.getByName(destIP);
-        DatagramPacket packet = new DatagramPacket(str.getBytes(), str.length(), destination, port);
+    public void sendBroadcast() throws IOException {
+        InetAddress destination = InetAddress.getByName("255.255.255.255");
+        DatagramPacket packet = new DatagramPacket("".getBytes(), "".length(), destination, 12345);
         udpSocket.send(packet);
     }
 

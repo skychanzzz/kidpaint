@@ -22,11 +22,11 @@ public class KidPaint extends JFrame implements IObserver {
 
 
     public KidPaint() {
+        this.ui = UI.getInstance();
         client = Client.getInstance();
 
         client.subscribe(this);
 
-        this.ui = UI.getInstance();
         showNamePanel();
 
         client.runServ();
