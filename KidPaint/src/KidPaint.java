@@ -49,7 +49,11 @@ public class KidPaint extends JFrame implements IObserver {
             if (change.length == 2) {
                 Pen pen = new Pen((int) change[1], (LinkedList<Point>) change[0]);
                 client.writeServerGO(pen);
-            } else {
+            }else if(change[0] instanceof Sketchpad) {
+                Sketchpad pad = (Sketchpad) change[0];
+                client.writeServerGO(pad);
+            }
+            else {
                 Message msg = new Message(name, (String) change[0]);
                 client.writeServerGO(msg);
             }
@@ -64,7 +68,7 @@ public class KidPaint extends JFrame implements IObserver {
 
     private void SetPen(Pen go) {
         Pen pen = go;
-        ui.selectColor(pen.color);
+        ui.setColor(pen.color);
         LinkedList<Point> padPoints = pen.points;
         for (int i = 0; i < padPoints.size(); i++) {
             ui.paintPixel(padPoints.get(i).x, padPoints.get(i).y);

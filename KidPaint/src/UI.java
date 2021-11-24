@@ -1,9 +1,10 @@
-import javax.swing.JFrame;
-import javax.swing.JPanel;
+import GameObject.Sketchpad;
+import util.ByteArrayParser;
+import util.FileWriter;
+
+import javax.swing.*;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
@@ -13,14 +14,12 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import javax.swing.JScrollPane;
-import javax.swing.JToggleButton;
-import javax.swing.SwingUtilities;
 import java.awt.Color;
 import javax.swing.border.LineBorder;
 
@@ -44,6 +43,7 @@ public class UI extends JFrame {
     LinkedList<Point> change;
     volatile boolean token = false;
     volatile boolean isMsg=false;
+    volatile boolean isSketchData=false;
     String Msg;
 
     /**
@@ -221,6 +221,36 @@ public class UI extends JFrame {
             }
         });
 
+        JButton saveBtn = new JButton("Save");
+        saveBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    FileWriter.writeFile("sketchdata", ByteArrayParser.object2Byte(new Sketchpad(data)));
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        });
+        toolPanel.add(saveBtn);
+
+        JButton sendBtn = new JButton("Send");
+        sendBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    byte[] sketchData = FileWriter.readFile("sketchdata");
+                    Sketchpad pad = (Sketchpad) ByteArrayParser.byte2Object(sketchData);
+                    setData(pad.sketchData, blockSize);
+                    token = true;
+                    isSketchData = true;
+                } catch (IOException | ClassNotFoundException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        });
+        toolPanel.add(sendBtn);
+
         JPanel msgPanel = new JPanel();
 
         getContentPane().add(msgPanel, BorderLayout.EAST);
@@ -361,7 +391,14 @@ public class UI extends JFrame {
             Object[] m=new Object[1];
             m[0]=Msg;
             return m;
-        }else {
+        }else if (isSketchData) {
+            isSketchData = false;
+            Sketchpad pad = new Sketchpad(data);
+            Object[] m=new Object[1];
+            m[0]=pad;
+            return m;
+        }
+        else {
             Object[] a = new Object[2];
             a[0] = change;
             a[1] = selectedColor;
@@ -373,5 +410,9 @@ public class UI extends JFrame {
         SwingUtilities.invokeLater(() -> {
             chatArea.append(content + "\n");
         });
+    }
+
+    public void setColor(int color) {
+        this.selectedColor = color;
     }
 }
