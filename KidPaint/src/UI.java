@@ -397,8 +397,7 @@ public class UI extends JFrame {
             Object[] m=new Object[1];
             m[0]=pad;
             return m;
-        }
-        else {
+        } else {
             Object[] a = new Object[2];
             a[0] = change;
             a[1] = selectedColor;

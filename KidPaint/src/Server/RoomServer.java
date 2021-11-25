@@ -16,7 +16,7 @@ public class RoomServer {
     protected ArrayList<Socket> clients;
     protected String name;
 
-    protected RoomServer(String name){
+    protected RoomServer(String name, int sizeX, int sizeY){
         try {
             this.srvSocket = new ServerSocket(0);
         } catch (IOException ioException) {
@@ -24,7 +24,7 @@ public class RoomServer {
         }
         clients = new ArrayList<>();
         this.name = name;
-        sketchData = new int[50][50];
+        sketchData = new int[sizeX][sizeY];
         sketchData[0][0] = -543230;
         sketchData[1][1] = -543230;
     }

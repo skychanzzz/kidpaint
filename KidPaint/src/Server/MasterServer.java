@@ -21,7 +21,7 @@ public class MasterServer {
         try {
             udpSocket = new DatagramSocket(port);
             rooms = new ArrayList<>();
-            RoomServer room1 = new RoomServer("Room1");
+            RoomServer room1 = new RoomServer("Room1", 50, 50);
             rooms.add(room1);
             Thread t1 = new Thread(() -> room1.start());
             t1.start();
@@ -52,7 +52,7 @@ public class MasterServer {
                 new Thread(() -> {
                     Room newRoom = getCreateRoomData(tcpIn);
                     if (newRoom != null) {
-                        RoomServer room = new RoomServer(newRoom.name);
+                        RoomServer room = new RoomServer(newRoom.name, newRoom.sizeX, newRoom.sizeY);
                         rooms.add(room);
                         new Thread(() -> room.start()).start();
                         SendRooms(tcpOut);
@@ -81,7 +81,7 @@ public class MasterServer {
 
     private void SendRooms(DataOutputStream tcpOut) {
         for (RoomServer room : rooms) {
-            Room roomGO = new Room(room.name, room.getPort());
+            Room roomGO = new Room(room.name, room.getPort(), room.sketchData.length, room.sketchData[0].length);
             JavaNetwork.writeServerGO(tcpOut, roomGO);
         }
     }

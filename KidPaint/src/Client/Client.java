@@ -86,8 +86,8 @@ public class Client implements IObserver {
         return false;
     }
 
-    public void createRoom(String roomName) {
-        Room newRoom = new Room(roomName, 0);
+    public void createRoom(String roomName, int sizeX, int sizeY) {
+        Room newRoom = new Room(roomName, 0, sizeX, sizeY);
         int roomCount = rooms.size();
         JavaNetwork.writeServerGO(tcpOut, newRoom);
 

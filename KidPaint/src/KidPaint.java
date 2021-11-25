@@ -52,8 +52,7 @@ public class KidPaint extends JFrame implements IObserver {
             }else if(change[0] instanceof Sketchpad) {
                 Sketchpad pad = (Sketchpad) change[0];
                 client.writeServerGO(pad);
-            }
-            else {
+            } else {
                 Message msg = new Message(name, (String) change[0]);
                 client.writeServerGO(msg);
             }
@@ -175,7 +174,7 @@ public class KidPaint extends JFrame implements IObserver {
         createRoomBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-               client.createRoom(roomName.getText());
+               client.createRoom(roomName.getText(), 5, 5);
                dispose();
 
                 Thread t = new Thread(() -> {
