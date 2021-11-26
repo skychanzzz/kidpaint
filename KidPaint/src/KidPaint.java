@@ -118,7 +118,7 @@ public class KidPaint extends JFrame implements IObserver {
 
     private void setUI(List<Room> rooms) {
         this.setTitle("KidsPaint");
-        this.setSize(400, 370);
+        this.setSize(400, 430);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         Container container = this.getContentPane();
         container.setLayout(new FlowLayout());
