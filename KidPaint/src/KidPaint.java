@@ -159,9 +159,14 @@ public class KidPaint extends JFrame implements IObserver {
         roomName.setPreferredSize(new Dimension(350, 30));
         container.add(roomName);
 
+
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(0, 1));
         container.add(panel);
+        JTextField sizeX = new JTextField();
+        JTextField sizeY = new JTextField();
+        panel.add(sizeX);
+        panel.add(sizeY);
         JButton createRoomBtn = new JButton("Create Room");
         createRoomBtn.setFont(new Font("Serif", Font.BOLD, 20));
         createRoomBtn.setBackground(new Color(255, 178, 102));
@@ -171,10 +176,12 @@ public class KidPaint extends JFrame implements IObserver {
         joinRoomBtn.setFont(new Font("Serif", Font.BOLD, 20));
         joinRoomBtn.setBackground(new Color(255, 178, 102));
         panel.add(joinRoomBtn);
+
+
         createRoomBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-               client.createRoom(roomName.getText(), 5, 5);
+               client.createRoom(roomName.getText(), Integer.parseInt(sizeX.getText()), Integer.parseInt(sizeY.getText()));
                dispose();
 
                 Thread t = new Thread(() -> {
@@ -205,8 +212,6 @@ public class KidPaint extends JFrame implements IObserver {
                 t.start();
             }
         });
-        JLabel message = new JLabel("Placeholder");
-        panel.add(message);
         this.setVisible(true);
     }
 
